@@ -27,6 +27,7 @@ export class BarLakBot{
             ["withdraw", this.onWithdrawMessage],
             ["reset", this.onResetMessage],
             ["setBarChannel", this.onSetBarChannelMessage],
+            ["fixRank", this.onFixRank],
         ]
         this.guild = guild
         this.readDb()
@@ -236,5 +237,14 @@ export class BarLakBot{
                 });
             })
         }
+    }
+
+    onFixRank = (message, args) => {
+        args = args.split(" ")
+        const value = parseFloat(args[1])
+        if (!isNaN(value) && args[0] in this.ranking) {
+            this.ranking[args[0]] = args[1]
+        }
+        this.writeBar(this.barChannel);
     }
 }
