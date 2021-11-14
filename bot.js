@@ -237,6 +237,7 @@ export class BarLakBot{
     }
 
     onFixRank = (message, args) => {
+        if (!this.hasPermission(message)) return
         args = args.split(" ")
         const value = parseFloat(args[1])
         if (!isNaN(value) && args[0] in this.ranking) {
