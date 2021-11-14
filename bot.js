@@ -3,7 +3,7 @@ import { splitBar } from 'string-progressbar';
 
 const getLastMessage = async (channel) => {
     const messages = await channel.messages.fetch({limit: 1})
-    const lastMessage = messages.first()
+    const lastMessage = await messages.first()
     return lastMessage
 }
 
@@ -15,7 +15,8 @@ export class BarLakBot{
     ranking;
     dbChannel;
 
-    constructor(guild){
+    constructor(client, guild){
+        this.client = client
         this.meta = 0;
         this.current = 0;
         this.ranking = {};
@@ -36,13 +37,24 @@ export class BarLakBot{
     hasPermission = (message) => {
         const consul = message.guild.roles.cache.find(role => role.name === "Cônsules")
         const gov = message.guild.roles.cache.find(role => role.name === "Governador")
-        console.log(gov)
-        if (message.member.roles.cache.has(consul.id) || message.member.roles.cache.has(gov.id)){
+        if (consul && message.member.roles.cache.has(consul.id) || gov && message.member.roles.cache.has(gov.id)){
             return true
         }else{
-            message.channel.send("Você não possui a permissão de Cônsule ou Governador.")
+            message.channel.send("Você não possui o cargo de Cônsule ou Governador.")
         }
         return false
+    }
+
+    editChannelLastMessage = (channel, newMessage) => {
+        getLastMessage(channel).then(message => {
+            if (message) {
+                if (message.author.id == this.client.user.id) {
+                    message.edit(newMessage)
+                }else{
+                    message.channel.send(newMessage)
+                }
+            }
+        })
     }
 
     routeMessage(message) {
@@ -78,35 +90,30 @@ export class BarLakBot{
     }
 
     writeBar = (channel) => {
-        getLastMessage(channel).then((lastMessage) => {
-            let msg = this.writeRanking()
-            if (!this.meta) {
-                channel.send(`Defina o valor da meta a ser atingida (!ajuda para ver os comandos)`);
-    
-            } else {
-                const split = splitBar(this.meta, this.current, 15);
-                var ajuste = + split[1]
-                if (+ split[1] < 100){
-                msg += (`\nMeta da Tesouraria = ${String (this.meta)} Gold  :coin:  \nValor Atual = ${String (this.current)} Gold  :coin: \n\n ${"[" + split[0] + "] [" + ajuste.toFixed(2) + "%]"}\n`);
-                console.log ('\nMeta da Tesouraria = ', this.max,'Gold');
-                console.log ('Valor Atual =', this.current,'Gold\n');
-                console.log("[" + split[0] + "] [" + split[1] + "%]\n");
-                }
-                if (+ split[1] >= 100)
-                {
-                msg += (`\nMeta da Tesouraria = ${String (this.meta)} Gold  :coin:  \nValor Atual = ${String (this.current)} Gold  :coin: \n\n ${"[" + split[0] + "] [" + ajuste.toFixed(2) + "%]"} :fire: \n`);
-                console.log ('\nMeta da Tesouraria = ', this.meta,'Gold');
-                console.log ('Valor Atual =', this.current,'Gold\n');
-                console.log("[" + split[0] + "] [" + split[1] + "%]\n");
-                msg += (`\n:partying_face: ** Parabéns pessoal, atingimos a meta para pagar os impostos**  :partying_face: `)
-                }
-                if (lastMessage) {
-                    lastMessage.edit(msg)
-                }else {
-                    channel.send(msg)
-                }
+        let msg = this.writeRanking()
+        if (!this.meta) {
+            channel.send(`Defina o valor da meta a ser atingida (!ajuda para ver os comandos)`);
+
+        } else {
+            const split = splitBar(this.meta, this.current, 15);
+            var ajuste = + split[1]
+            if (+ split[1] < 100){
+            msg += (`\nMeta da Tesouraria = ${String (this.meta)} Gold  :coin:  \nValor Atual = ${String (this.current)} Gold  :coin: \n\n ${"[" + split[0] + "] [" + ajuste.toFixed(2) + "%]"}\n`);
+            console.log ('\nMeta da Tesouraria = ', this.max,'Gold');
+            console.log ('Valor Atual =', this.current,'Gold\n');
+            console.log("[" + split[0] + "] [" + split[1] + "%]\n");
             }
-        })
+            if (+ split[1] >= 100)
+            {
+            msg += (`\nMeta da Tesouraria = ${String (this.meta)} Gold  :coin:  \nValor Atual = ${String (this.current)} Gold  :coin: \n\n ${"[" + split[0] + "] [" + ajuste.toFixed(2) + "%]"} :fire: \n`);
+            console.log ('\nMeta da Tesouraria = ', this.meta,'Gold');
+            console.log ('Valor Atual =', this.current,'Gold\n');
+            console.log("[" + split[0] + "] [" + split[1] + "%]\n");
+            msg += (`\n:partying_face: ** Parabéns pessoal, atingimos a meta para pagar os impostos**  :partying_face: `)
+            }
+            
+            this.editChannelLastMessage(channel, msg)
+        }
     }
 
     onMetaMessage = (message, args) => {
@@ -196,17 +203,8 @@ export class BarLakBot{
             "barChannel": this.barChannel.id
         }
         if (this.dbChannel) {
-            this.dbChannel.messages.fetch({limit: 1}).then(messages => {
-                const latestMessage = messages.first()
-                if (!latestMessage) {
-                    this.dbChannel.send(JSON.stringify(obj))
-                }else{
-                    latestMessage.edit(JSON.stringify(obj))
-                }
-            })
-            
+            this.editChannelLastMessage(this.dbChannel, JSON.stringify(obj))
         }
-        
     }
 
     readDb = () => {
@@ -230,7 +228,6 @@ export class BarLakBot{
                             })
                         })
                     }
-
                     if (!this.barChannel) {
                         this.barChannel = guild.channels.cache.first().children.first()
                     }
@@ -246,5 +243,6 @@ export class BarLakBot{
             this.ranking[args[0]] = args[1]
         }
         this.writeBar(this.barChannel);
+        message.channel.send(`Valor do Rank de ${args[0]} alterado para ${args[1]} com sucesso!`)
     }
 }

@@ -1,9 +1,8 @@
 
 import discord from 'discord.js';
-const { Discord } = discord;
+const { Client, Intents } = discord;
 import { config } from "dotenv";
-import { Client, Intents } from 'discord.js';
-import { BarLakBot } from "./message_routes.js";
+import { BarLakBot } from "./bot.js";
 
 config()
 
@@ -24,9 +23,10 @@ client.on("guildCreate", guild => {
 client.on("ready", () => {
     console.log("Bot Ready")
     client.guilds.fetch().then((guilds) => guilds.forEach((guild) =>{
-        bots[guild] = new BarLakBot(guild);
-        client.user.setStatus("online")
-
+        guild.fetch().then(guild => {
+            bots[guild] = new BarLakBot(client, guild);
+            client.user.setStatus("online")
+        })
     }))
 });
 
