@@ -240,7 +240,7 @@ export class BarLakBot{
         args = args.split(" ")
         const value = parseFloat(args[1])
         if (!isNaN(value) && args[0] in this.ranking) {
-            this.ranking[args[0]] = args[1]
+            this.ranking[args[0]] = value
         }
         this.writeBar(this.barChannel);
         message.channel.send(`Valor do Rank de ${args[0]} alterado para ${args[1]} com sucesso!`)
